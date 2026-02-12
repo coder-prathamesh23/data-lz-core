@@ -46,7 +46,7 @@ variable "subnets" {
       })
     })), [])
     private_endpoint_network_policies     = optional(string, "Disabled")
-    private_link_service_network_policies = optional(string, "Enabled")
+    private_link_service_network_policies_enabled = optional(string, "Enabled")
   }))
 }
 

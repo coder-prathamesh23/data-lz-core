@@ -1,58 +1,75 @@
 # -----------------------
 # Stack identity
-name_prefix                  = "dp-lz"
 location                     = "westus3"
 resource_group_name          = "rg-dp-lz-core"
 allow_resource_group_destroy = false
 
+tags = {
+  workorder  = "TBD"
+  costcenter = "TBD"
+}
+
 # -----------------------
 # Networking (minimal)
-vnet_name          = "vnet-dp-lz"
-vnet_address_space = ["10.91.4.0/23"]
-dns_servers        = ["172.22.7.4"]
+vnet = {
+  name          = "vnet-dp-lz"
+  address_space = ["10.91.4.0/23"]
+}
 
 # One workload subnet + one private endpoint subnet (matches the diagram)
 subnets = {
-  "snet-workload" = {
+  workload = {
+    name             = "snet-workload"
     address_prefixes = ["10.91.4.0/24"]
   }
-  "snet-private-endpoints" = {
-    address_prefixes                          = ["10.91.5.0/26"]
-    private_endpoint_network_policies_enabled = true
+
+  private_endpoints = {
+    name             = "snet-private-endpoints"
+    address_prefixes = ["10.91.5.0/26"]
+
+    # AzureRM expects string values: "Enabled" / "Disabled"
+    private_endpoint_network_policies             = "Disabled"
+    private_link_service_network_policies_enabled = "Enabled"
   }
 }
 
 # -----------------------
 # Hub connectivity
-enable_hub_connectivity = true
-connectivity_type       = "vnet_peering" # or "vwan_hub_connection"
+hub_connectivity = {
+  enabled           = true
+  connectivity_type = "vnet_peering" # or "vwan_virtual_hub"
 
-# If peering:
-hub_subscription_id     = "" # set if hub is in a different subscription
-hub_vnet_id             = "" # recommended: set to full resource id
-hub_vnet_name           = "" # needed if you want to manage hub->spoke peering
-hub_resource_group_name = "" # needed if you want to manage hub->spoke peering
+  # If peering: prefer hub_vnet_id, otherwise provide hub_vnet_name + hub_resource_group_name
+  hub_vnet_id             = ""
+  hub_vnet_name           = ""
+  hub_resource_group_name = ""
+  manage_hub_side_peering = false
 
-# If vWAN hub connection:
-hub_virtual_hub_id = "" # set to /subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualHubs/...
+  # If vWAN: set virtual_hub_id (and optional route-table ids)
+  virtual_hub_id             = ""
+  virtual_hub_route_table_id = ""
+  propagated_route_table_ids = []
+  labels                     = []
+}
 
 # -----------------------
-# Private DNS (central)
-enable_private_dns_links = true
-hub_private_dns_rg_name  = "rg-hub-dns-azuconnectivity-flz-westus3"
-
-private_dns_zones = [
-  "privatelink.blob.core.windows.net",
-  "privatelink.dfs.core.windows.net",
-  "privatelink.vaultcore.azure.net"
-]
+# Private DNS (central hub zones; this stack links the spoke VNet)
+private_dns = {
+  enabled                 = true
+  hub_private_dns_rg_name = "rg-hub-dns-azuconnectivity-flz-westus3"
+  zone_names = [
+    "privatelink.blob.core.windows.net",
+    "privatelink.dfs.core.windows.net",
+    "privatelink.vaultcore.azure.net",
+  ]
+}
 
 # -----------------------
 # Key Vault baseline
-enable_key_vault = true
-key_vault_name   = "kv-dp-lz-core-01"
+key_vault = {
+  enabled = true
+  name    = "kv-dp-lz-core-01"
 
-tags = {
-  workorder  = "TBD"
-  costcenter = "TBD"
+  # keep KV private by default
+  public_network_access_enabled = false
 }

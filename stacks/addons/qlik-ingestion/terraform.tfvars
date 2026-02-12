@@ -10,3 +10,9 @@ subnet_id_private_endpoints = "/subscriptions/<sub>/resourceGroups/<rg>/provider
 # If your Private DNS zones are in a central hub subscription:
 hub_subscription_id     = ""
 hub_private_dns_rg_name = "rg-hub-dns-azuconnectivity-flz-westus3"
+
+# Optional tags
+tags = {
+  workorder  = "TBD"
+  costcenter = "TBD"
+}

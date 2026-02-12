@@ -13,6 +13,12 @@ variable "resource_group_name" {
   description = "Resource group name where add-on resources will be created."
 }
 
+variable "storage_account_id" {
+  type        = string
+  description = "Optional existing storage account id. If null, the module creates a new storage account."
+  default     = null
+}
+
 variable "storage_account_name" {
   type        = string
   description = "Storage account name for Qlik ingestion."

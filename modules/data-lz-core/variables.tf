@@ -44,7 +44,7 @@ variable "subnets" {
 
     # AzureRM v4 uses string policies on subnets ("Enabled"/"Disabled").
     private_endpoint_network_policies         = optional(string, "Disabled")
-    private_link_service_network_policies     = optional(string, "Enabled")
+    private_link_service_network_policies_enabled     = optional(string, "Enabled")
   }))
 }
 
