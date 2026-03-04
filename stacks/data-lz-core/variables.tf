@@ -1,81 +1,116 @@
 variable "location" {
+  description = "Azure region for resources"
   type        = string
-  description = "Azure region."
+  default     = "westus3"
 }
 
 variable "resource_group_name" {
   type        = string
-  description = "Spoke resource group name."
+  description = "Resource group name for the landing zone (spoke) resources."
 }
 
 variable "tags" {
   type        = map(string)
-  description = "Common tags."
+  description = "Common tags applied to all resources."
   default     = {}
-}
-
-variable "hub_subscription_id" {
-  type        = string
-  description = "Hub subscription id (optional). Leave empty if hub resources are in the same subscription."
-  default     = ""
 }
 
 variable "allow_resource_group_destroy" {
   type        = bool
-  description = "If true, resource group is not protected by prevent_destroy."
+  description = "If true, RG is not protected by prevent_destroy. Default false (protected)."
   default     = false
 }
 
-variable "vnet" {
+# ---------------------------
+# Networking (Cloud Services managed)
+# ---------------------------
+
+variable "spoke_vnet" {
+  description = "Existing spoke VNet reference (Cloud Services managed). Provide either id OR (name + resource_group_name)."
   type = object({
-    name          = string
-    address_space = list(string)
+    id                  = optional(string)
+    name                = optional(string)
+    resource_group_name = optional(string)
   })
+
+  validation {
+    condition = (
+      try(var.spoke_vnet.id, null) != null ||
+      (
+        try(var.spoke_vnet.name, null) != null &&
+        try(var.spoke_vnet.resource_group_name, null) != null
+      )
+    )
+    error_message = "spoke_vnet: provide either spoke_vnet.id OR (spoke_vnet.name + spoke_vnet.resource_group_name)."
+  }
 }
 
-variable "subnets" {
-  type = map(object({
-    name                                  = string
-    address_prefixes                      = list(string)
-    service_endpoints                     = optional(list(string), [])
-    delegations                           = optional(list(object({
-      name = string
-      service_delegation = object({
-        name    = string
-        actions = list(string)
-      })
-    })), [])
-    private_endpoint_network_policies     = optional(string, "Disabled")
-    private_link_service_network_policies = optional(string, "Enabled")
-  }))
-}
-
-variable "hub_connectivity" {
+variable "workload_subnet" {
+  description = "Existing workload subnet reference (Cloud Services managed). Provide either id OR (name + vnet/rg resolvable)."
   type = object({
-    enabled                 = bool
-    connectivity_type       = string
-
-    hub_vnet_id             = optional(string, "")
-    hub_vnet_name           = optional(string, "")
-    hub_resource_group_name = optional(string, "")
-    manage_hub_side_peering = optional(bool, false)
-
-    virtual_hub_id                  = optional(string, "")
-    virtual_hub_route_table_id      = optional(string, "")
-    propagated_route_table_ids      = optional(list(string), [])
-    labels                          = optional(list(string), [])
+    id                   = optional(string)
+    name                 = optional(string)
+    virtual_network_name = optional(string)
+    resource_group_name  = optional(string)
   })
+
+  validation {
+    condition = (
+      try(var.workload_subnet.id, null) != null ||
+      (
+        try(var.workload_subnet.name, null) != null &&
+        (
+          # either explicitly set vnet+rg OR let it be derived from spoke_vnet
+          (
+            try(var.workload_subnet.virtual_network_name, null) != null &&
+            try(var.workload_subnet.resource_group_name, null) != null
+          ) ||
+          (
+            try(var.spoke_vnet.name, null) != null &&
+            try(var.spoke_vnet.resource_group_name, null) != null
+          )
+        )
+      )
+    )
+    error_message = "workload_subnet: provide either workload_subnet.id OR workload_subnet.name and ensure vnet/rg are provided (directly or via spoke_vnet)."
+  }
 }
 
-variable "private_dns" {
+variable "private_endpoints_subnet" {
+  description = "Existing private endpoints subnet reference (Cloud Services managed). Provide either id OR (name + vnet/rg resolvable)."
   type = object({
-    enabled                 = bool
-    hub_private_dns_rg_name = string
-    zone_names              = list(string)
+    id                   = optional(string)
+    name                 = optional(string)
+    virtual_network_name = optional(string)
+    resource_group_name  = optional(string)
   })
+
+  validation {
+    condition = (
+      try(var.private_endpoints_subnet.id, null) != null ||
+      (
+        try(var.private_endpoints_subnet.name, null) != null &&
+        (
+          (
+            try(var.private_endpoints_subnet.virtual_network_name, null) != null &&
+            try(var.private_endpoints_subnet.resource_group_name, null) != null
+          ) ||
+          (
+            try(var.spoke_vnet.name, null) != null &&
+            try(var.spoke_vnet.resource_group_name, null) != null
+          )
+        )
+      )
+    )
+    error_message = "private_endpoints_subnet: provide either private_endpoints_subnet.id OR private_endpoints_subnet.name and ensure vnet/rg are provided (directly or via spoke_vnet)."
+  }
 }
 
+# ---------------------------
+# Optional baseline resources
+# ---------------------------
 variable "key_vault" {
+  description = "Optional baseline Key Vault."
   type = object({
     enabled                        = bool
     name                           = string
@@ -84,4 +119,8 @@ variable "key_vault" {
     soft_delete_retention_days     = optional(number, 7)
     public_network_access_enabled  = optional(bool, false)
   })
+  default = {
+    enabled = false
+    name    = ""
+  }
 }
