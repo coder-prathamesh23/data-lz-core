@@ -3,14 +3,19 @@ output "resource_group_id" {
   description = "Resource group ID for the landing zone."
 }
 
-output "vnet_id" {
-  value       = azurerm_virtual_network.spoke.id
-  description = "Spoke VNet ID."
+output "spoke_vnet_id" {
+  value       = var.spoke_vnet_id
+  description = "Spoke VNet ID (Cloud Services managed)."
 }
 
-output "subnet_ids" {
-  value       = { for k, s in azurerm_subnet.this : k => s.id }
-  description = "Map of subnet ids."
+output "workload_subnet_id" {
+  value       = var.workload_subnet_id
+  description = "Workload subnet ID (Cloud Services managed)."
+}
+
+output "private_endpoints_subnet_id" {
+  value       = var.private_endpoints_subnet_id
+  description = "Private endpoints subnet ID (Cloud Services managed)."
 }
 
 output "key_vault_id" {
