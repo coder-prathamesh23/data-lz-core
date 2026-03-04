@@ -26,7 +26,7 @@ variables:
     value: "true"
 
 pool:
-  vmImage: azure-devopsmanaged-pool
+  name: azure-devopsmanaged-pool
 
 stages:
   # ----------------------------
@@ -39,6 +39,17 @@ stages:
         displayName: Validate
         steps:
           - checkout: self
+
+          - bash: |
+              set -euo pipefail
+              if ! command -v unzip >/dev/null 2>&1; then
+                echo "Installing unzip..."
+                sudo apt-get update
+                sudo apt-get install -y unzip
+              else
+                echo "unzip already present"
+              fi
+            displayName: Ensure unzip is installed
 
           - task: TerraformInstaller@1
             displayName: Install Terraform
@@ -70,6 +81,17 @@ stages:
         steps:
           - checkout: self
 
+          - bash: |
+              set -euo pipefail
+              if ! command -v unzip >/dev/null 2>&1; then
+                echo "Installing unzip..."
+                sudo apt-get update
+                sudo apt-get install -y unzip
+              else
+                echo "unzip already present"
+              fi
+            displayName: Ensure unzip is installed
+
           - task: TerraformInstaller@1
             displayName: Install Terraform
             inputs:
@@ -78,7 +100,7 @@ stages:
           - task: AzureCLI@2
             displayName: terraform init + plan
             inputs:
-              azureSubscription: "$(AZURE_SERVICE_CONNECTION)"  
+              azureSubscription: "$(AZURE_SERVICE_CONNECTION)"
               scriptType: bash
               scriptLocation: inlineScript
               addSpnToEnvironment: true
@@ -110,6 +132,9 @@ stages:
                 echo "==> terraform plan"
                 terraform plan -no-color -var-file="terraform.tfvars" -out="$(Build.ArtifactStagingDirectory)/tfplan"
 
+                echo "==> terraform show"
+                terraform show -no-color "$(Build.ArtifactStagingDirectory)/tfplan" > "$(Build.ArtifactStagingDirectory)/tfplan.txt"
+
                 # Keep lockfile with plan artifact if present
                 if [ -f ".terraform.lock.hcl" ]; then
                   cp .terraform.lock.hcl "$(Build.ArtifactStagingDirectory)/"
@@ -135,11 +160,24 @@ stages:
         displayName: Apply
         # IMPORTANT: Configure Approvals & checks on this environment in Azure DevOps UI.
         environment: data-platform-lz-dev
+        pool:
+          name: azure-devopsmanaged-pool
         strategy:
           runOnce:
             deploy:
               steps:
                 - checkout: self
+
+                - bash: |
+                    set -euo pipefail
+                    if ! command -v unzip >/dev/null 2>&1; then
+                      echo "Installing unzip..."
+                      sudo apt-get update
+                      sudo apt-get install -y unzip
+                    else
+                      echo "unzip already present"
+                    fi
+                  displayName: Ensure unzip is installed
 
                 - task: TerraformInstaller@1
                   displayName: Install Terraform
