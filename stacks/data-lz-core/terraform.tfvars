@@ -1,56 +1,44 @@
 # -----------------------
-# Stack identity
-name_prefix                  = "dp-lz"
+# Core stack config
 location                     = "westus3"
 resource_group_name          = "rg-dp-lz-core"
 allow_resource_group_destroy = false
 
 # -----------------------
-# Networking (minimal)
-vnet_name          = "vnet-dp-lz"
-vnet_address_space = ["10.91.4.0/23"]
-dns_servers        = ["172.22.7.4"]
+# Networking (Cloud Services managed)
+# Provide either IDs OR names (recommended) for data lookups.
 
-# One workload subnet + one private endpoint subnet (matches the diagram)
-subnets = {
-  "snet-workload" = {
-    address_prefixes = ["10.91.4.0/24"]
-  }
-  "snet-private-endpoints" = {
-    address_prefixes                          = ["10.91.5.0/26"]
-    private_endpoint_network_policies_enabled = true
-  }
+# Option A : provide names so Terraform reads IDs via data sources
+spoke_vnet = {
+  name                = ""   # Cloud Services will provide
+  resource_group_name = ""   # Cloud Services will provide
 }
 
-# -----------------------
-# Hub connectivity
-enable_hub_connectivity = true
-connectivity_type       = "vnet_peering" # or "vwan_hub_connection"
+workload_subnet = {
+  name = ""  # Cloud Services will provide
+  # virtual_network_name and resource_group_name can be omitted if same as spoke_vnet
+}
 
-# If peering:
-hub_subscription_id     = "" # set if hub is in a different subscription
-hub_vnet_id             = "" # recommended: set to full resource id
-hub_vnet_name           = "" # needed if you want to manage hub->spoke peering
-hub_resource_group_name = "" # needed if you want to manage hub->spoke peering
+private_endpoints_subnet = {
+  name = ""  # Cloud Services will provide
+  # virtual_network_name and resource_group_name can be omitted if same as spoke_vnet
+}
 
-# If vWAN hub connection:
-hub_virtual_hub_id = "" # set to /subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualHubs/...
-
-# -----------------------
-# Private DNS (central)
-enable_private_dns_links = true
-hub_private_dns_rg_name  = "rg-hub-dns-azuconnectivity-flz-westus3"
-
-private_dns_zones = [
-  "privatelink.blob.core.windows.net",
-  "privatelink.dfs.core.windows.net",
-  "privatelink.vaultcore.azure.net"
-]
+# Option B: provide IDs directly 
+# spoke_vnet = { id = "" }
+# workload_subnet = { id = "" }
+# private_endpoints_subnet = { id = "" }
 
 # -----------------------
 # Key Vault baseline
-enable_key_vault = true
-key_vault_name   = "kv-dp-lz-core-01"
+key_vault = {
+  enabled                       = true
+  name                          = "kv-dp-lz-core-01"
+  sku_name                      = "standard"
+  purge_protection_enabled      = true
+  soft_delete_retention_days    = 7
+  public_network_access_enabled = false
+}
 
 tags = {
   workorder  = "TBD"
