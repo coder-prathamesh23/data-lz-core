@@ -58,6 +58,7 @@ stages:
 
           - bash: |
               set -euo pipefail
+              terraform version
 
               echo "==> terraform fmt (check only)"
               terraform fmt -check -diff -recursive
@@ -106,6 +107,10 @@ stages:
               addSpnToEnvironment: true
               inlineScript: |
                 set -euo pipefail
+                terraform version
+
+                # Sanity check: service connection name must be provided
+                : "${AZURE_SERVICE_CONNECTION:?AZURE_SERVICE_CONNECTION is required (variable group)}"
 
                 cd "${{ parameters.stackPath }}"
 
@@ -158,7 +163,6 @@ stages:
     jobs:
       - deployment: Apply
         displayName: Apply
-        # IMPORTANT: Configure Approvals & checks on this environment in Azure DevOps UI.
         environment: data-platform-lz-dev
         pool:
           name: azure-devopsmanaged-pool
@@ -197,6 +201,9 @@ stages:
                     addSpnToEnvironment: true
                     inlineScript: |
                       set -euo pipefail
+                      terraform version
+
+                      : "${AZURE_SERVICE_CONNECTION:?AZURE_SERVICE_CONNECTION is required (variable group)}"
 
                       cd "${{ parameters.stackPath }}"
 
@@ -205,6 +212,11 @@ stages:
                       : "${TF_BACKEND_CONTAINER:?TF_BACKEND_CONTAINER is required}"
 
                       key="${TF_BACKEND_KEY:-${{ parameters.stackPath }}/terraform.tfstate}"
+
+                      # Ensure provider versions match the plan (prevents drift between Plan and Apply)
+                      if [ -f "$(Pipeline.Workspace)/tfplan/.terraform.lock.hcl" ]; then
+                        cp "$(Pipeline.Workspace)/tfplan/.terraform.lock.hcl" ./.terraform.lock.hcl
+                      fi
 
                       terraform init -input=false -no-color \
                         -backend-config="resource_group_name=${TF_BACKEND_RG}" \
