@@ -226,3 +226,11 @@ stages:
 
                       echo "==> terraform apply (from approved saved plan)"
                       terraform apply -no-color -auto-approve "$(Pipeline.Workspace)/tfplan/tfplan"
+
+
+echo "==> Using service connection SPN for Terraform auth"
+export ARM_CLIENT_ID="$servicePrincipalId"
+export ARM_CLIENT_SECRET="$servicePrincipalKey"
+export ARM_TENANT_ID="$tenantId"
+export ARM_SUBSCRIPTION_ID="$subscriptionId"
+export ARM_USE_CLI=false
