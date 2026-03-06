@@ -1,20 +1,14 @@
 echo "==> Using service connection for Terraform auth"
-
-export ARM_CLIENT_ID="$servicePrincipalId"
-export ARM_TENANT_ID="$tenantId"
-export ARM_SUBSCRIPTION_ID="$subscriptionId"
+export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+export ARM_TENANT_ID="${tenantId:-$(az account show --query tenantId -o tsv)}"
+export ARM_CLIENT_ID="${servicePrincipalId:-}"
 export ARM_USE_CLI=false
-
-# If the service connection provides a secret, use it.
 if [ -n "${servicePrincipalKey:-}" ]; then
   export ARM_CLIENT_SECRET="$servicePrincipalKey"
+elif [ -n "${idToken:-}" ]; then
+  export ARM_USE_OIDC=true
+  export ARM_OIDC_TOKEN="$idToken"
 else
-  # If we are on workload identity federation, Azure DevOps may provide an OIDC token file.
-  if [ -n "${AZURE_FEDERATED_TOKEN_FILE:-}" ] && [ -f "${AZURE_FEDERATED_TOKEN_FILE}" ]; then
-    export ARM_OIDC_TOKEN="$(cat "${AZURE_FEDERATED_TOKEN_FILE}")"
-    export ARM_USE_OIDC=true
-  else
-    echo "ERROR: No servicePrincipalKey (client secret) and no AZURE_FEDERATED_TOKEN_FILE found. Check the service connection auth type and addSpnToEnvironment."
-    exit 1
-  fi
+  echo "ERROR: AzureCLI@2 did not expose servicePrincipalKey or idToken. Ensure addSpnToEnvironment: true and the service connection auth type is SPN or Workload Identity."
+  exit 1
 fi
